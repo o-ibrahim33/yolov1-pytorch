@@ -9,6 +9,7 @@ import numpy as np
 from nets.nn import YOLOv1
 from utils.utils import nms
 
+
 # VOC class names and BGR color.
 VOC_CLASS_BGR = {
     'aeroplane': (128, 0, 0),
@@ -73,6 +74,10 @@ class YOLODetector:
         # Load YOLO model.
         print("Loading YOLO model...")
         yolo = YOLOv1()
+        
+        self.S = yolo.FS
+        self.B = yolo.NB
+        self.C = yolo.NC
 
         self.yolo = torch.nn.DataParallel(yolo)
         self.yolo.load_state_dict(torch.load(model_path)['state_dict'])
@@ -82,10 +87,8 @@ class YOLODetector:
         print("Done loading!")
 
         self.yolo.eval()
+        
 
-        self.S = self.yolo.module.module.FS
-        self.B = self.yolo.module.module.NB
-        self.C = self.yolo.module.module.NC
 
         self.class_name_list = class_name_list if (class_name_list is not None) else list(VOC_CLASS_BGR.keys())
         assert len(self.class_name_list) == self.C

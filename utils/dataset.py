@@ -123,8 +123,10 @@ class VOCDataset(Dataset):
         h, w, _ = img.shape
 
         img = np.fliplr(img)
-
-        x1, x2 = boxes[:, 0], boxes[:, 2]
+        try:
+            x1, x2 = boxes[:, 0], boxes[:, 2]
+        except:
+            print(boxes.shape,boxes)
         x1_new = w - x2
         x2_new = w - x1
         boxes[:, 0], boxes[:, 2] = x1_new, x2_new

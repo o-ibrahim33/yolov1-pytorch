@@ -13,17 +13,22 @@ import numpy as np
 from collections import defaultdict
 
 parser = argparse.ArgumentParser(description='YOLOv1 implementation using PyTorch')
-parser.add_argument('--base_dir', default='../../Datasets/VOC/', required=False, help='Path to data dir')
+parser.add_argument('--base_dir', default='Datasets', required=False, help='Path to data dir')
 parser.add_argument('--log_dir', default='./weights', required=False, help='Path to save weights')
 parser.add_argument('--init_lr', default=0.001, required=False, help='Initial learning rate')
 parser.add_argument('--base_lr', default=0.01, required=False, help='Base learning rate')
 parser.add_argument('--momentum', default=0.9, required=False, help='Momentum')
 parser.add_argument('--weight_decay', default=5.0e-4, required=False, help='Weight decay')
 parser.add_argument('--num_epochs', default=135, required=False, help='Number of epochs')
-parser.add_argument('--batch_size', default=64, required=False, help='Batch size')
+parser.add_argument('--batch_size', default=32, required=False, help='Batch size')
 parser.add_argument('--seed', default=42, required=False, help='Random seed')
+parser.add_argument('--weight_bit_width', default=8, type=int, required=False, help='Bitsize of weights')
+parser.add_argument('--act_bit_width', default=8, type=int, required=False, help='Bitsize of activations')
+parser.add_argument('--quantize', action='store_true', help='Quantization Flag')
 
 args = parser.parse_args()
+args.batch_size = int(args.batch_size)
+args.num_epochs = int(args.num_epochs)
 
 os.makedirs(args.log_dir, exist_ok=True)
 np.random.seed(args.seed)
@@ -59,7 +64,13 @@ def get_lr(optimizer):
 
 def train():
     # Load YOLO model.
-    net = YOLOv1(pretrained_backbone=True).to(device)
+    net = YOLOv1(
+        quantize=args.quantize,
+        weight_bit_width=args.weight_bit_width,
+        act_bit_width=args.act_bit_width,
+        pretrained_backbone=False
+    ).to(device)
+    
     net = torch.nn.DataParallel(net)
 
     accumulate = max(round(64 / args.batch_size), 1)

@@ -1,6 +1,16 @@
 import torch
 import torch.nn as nn
 
+from brevitas.nn.quant_conv import QuantConv2d
+from brevitas.nn.quant_activation import QuantIdentity,QuantReLU,QuantTanh
+from brevitas.nn.quant_layer import QuantNonLinearActLayer as QuantNLAL,ActQuantType
+from brevitas.nn.quant_bn import BatchNorm2dToQuantScaleBias
+
+from brevitas.inject.defaults import Int8ActPerTensorFloat
+
+from .quant_common import CommonIntActQuant, CommonUintActQuant, CommonWeightQuant, CommonActQuant
+from .quant_common import CommonIntWeightPerChannelQuant, CommonIntWeightPerTensorQuant
+
 
 def pad(k, p):
     if p is None:
@@ -14,6 +24,49 @@ class Conv(nn.Module):
         self.conv = nn.Conv2d(c1, c2, k, s, pad(k, p), dilation=d, groups=g, bias=False)
         self.bn = nn.BatchNorm2d(c2, momentum=0.03, eps=1e-3)
         self.act = nn.LeakyReLU(0.01, inplace=True) if act else nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        return self.act(self.bn(self.conv(x)))
+    
+class QuantConv(nn.Module):
+    def __init__(self, c1, c2, k, s=1, p=None, d=1, g=1, act=True, weight_bit_width=8, act_bit_width=8):
+        super(QuantConv, self).__init__()
+        
+        if weight_bit_width == 1:
+            weight_quant = CommonWeightQuant
+        else:
+            weight_quant = CommonIntWeightPerChannelQuant
+            
+        if act_bit_width == 1: 
+            act_quant = CommonActQuant
+        else:
+            act_quant = CommonUintActQuant
+            
+        self.conv = QuantConv2d(
+            c1,
+            c2,
+            k,
+            s,
+            pad(k, p),
+            groups=g,
+            dilation=d,
+            bias=False,
+            weight_quant=weight_quant,
+            weight_bit_width=weight_bit_width,
+            #return_quant_tensor=True
+        )
+        
+        self.bn = nn.BatchNorm2d(c2, momentum=0.03, eps=1e-3)
+        
+        self.default_act = QuantReLU(
+            act_quant=act_quant,
+            bit_width=act_bit_width,
+            per_channel_broadcastable_shape=(1, c2, 1, 1),
+            scaling_per_channel=False,
+            #return_quant_tensor=True
+        )
+       
+        self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else QuantIdentity()
 
     def forward(self, x):
         return self.act(self.bn(self.conv(x)))

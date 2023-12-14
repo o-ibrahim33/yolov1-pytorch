@@ -135,7 +135,7 @@ if __name__ == '__main__':
     model_path = 'weights/best.pth'
 
     # Path to image dir.
-    image_dir = '../../Datasets/VOC/test/IMAGES'
+    image_dir = 'Datasets/test/IMAGES'
 
     voc_class_names = list(VOC_CLASS_BGR.keys())
 
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     preds = defaultdict(list)
 
     print('DATA PREPARING...')
-    with open('../../Datasets/VOC/test.txt') as f:
+    with open('Datasets/test.txt') as f:
         lines = f.readlines()
     image_list = []
     for line in lines:
@@ -151,7 +151,7 @@ if __name__ == '__main__':
         image_name = f'{line}.jpg'
         image_list.append(image_name)
 
-        with open(f'../../Datasets/VOC/test/LABELS/{line}.txt') as f:
+        with open(f'Datasets/test/LABELS/{line}.txt') as f:
             objects = f.readlines()
 
         for object in objects:
